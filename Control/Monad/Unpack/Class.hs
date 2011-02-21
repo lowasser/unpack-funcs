@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators, TypeFamilies #-}
 module Control.Monad.Unpack.Class where
 
 import Control.Applicative
