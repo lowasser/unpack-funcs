@@ -4,14 +4,6 @@ module Control.Monad.Unpack.Class where
 import Control.Applicative
 import Control.Monad.Trans.Class
 
-import Data.Functor.Identity
-
-import GHC.Exts
-
-type (:~>) arg = UnpackedReaderT arg Identity
-
-infixr 0 :~>
-
 class Unpackable arg where
   data UnpackedReaderT arg :: (* -> *) -> * -> *
   runUnpackedReaderT :: UnpackedReaderT arg m a -> arg -> m a

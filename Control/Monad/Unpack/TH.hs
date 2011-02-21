@@ -1,22 +1,36 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
-module Control.Monad.Unpack.TH (unpack1, unpack) where
+module Control.Monad.Unpack.TH (unpack1Instance, unpackInstance, noUnpackInstance) where
 
 import Control.Monad
 import Control.Monad.Unpack.Class
 
 import Language.Haskell.TH
 
-unpack1 :: Name -> Q [Dec]
-unpack1 tycon = do
+-- | Unpack wrappers around primitive types, like 'Int'.
+unpack1Instance :: Name -> Q [Dec]
+unpack1Instance tycon = do
   TyConI dec <- reify tycon
   case dec of
     DataD cxt _ tyvars [con] _ -> unpacker1 cxt tycon tyvars con
+    dec -> error ("Cannot unpack: " ++ show dec)
 
-unpack :: Name -> Q [Dec]
-unpack tycon = do
+-- | Unpack complicated but single-constructor types.
+unpackInstance :: Name -> Q [Dec]
+unpackInstance tycon = do
   TyConI dec <- reify tycon
   case dec of
     DataD cxt _ tyvars [con] _ -> unpacker cxt tycon tyvars con
+    NewtypeD cxt _ tyvars con _ -> unpacker cxt tycon tyvars con
+    dec -> error ("Cannot unpack: " ++ show dec)
+
+-- | Do no unpacking at all.
+noUnpackInstance :: Name -> Q [Dec]
+noUnpackInstance tycon = do
+  TyConI dec <- reify tycon
+  case dec of
+    DataD cxt _ tyvars _ _ -> noUnpacker cxt tycon tyvars
+    NewtypeD cxt _ tyvars _ _ -> noUnpacker cxt tycon tyvars
+    dec -> error ("Cannot unpack: " ++ show dec)
 
 conArgs :: Con -> (Name, [Type])
 conArgs (NormalC conName args) = (conName, map snd args)
@@ -45,7 +59,7 @@ unpacker1 cxt tyCon tyArgs con = case conArgs con of
     fName <- newName "func"
     let decs = 
 	  [NewtypeInstD [] ''UnpackedReaderT [theTy, VarT mName, VarT aName]
-	    (NormalC funcName [(NotStrict, foldl (\ result argTy -> ArrowT `AppT` argTy `AppT` result)
+	    (NormalC funcName [(NotStrict, foldr (\ argTy result -> ArrowT `AppT` argTy `AppT` result)
 		  (VarT mName `AppT` VarT aName) conArgs)]) []] ++ pragmas ++ [
 	    FunD 'runUnpackedReaderT
 	      [Clause [ConP funcName [VarP fName], ConP conName (map VarP argNames)]
@@ -86,4 +100,28 @@ unpacker cxt tyCon tyArgs con = case conArgs con of
 		  `AppE` LamE [VarP argName] func)
 		  (VarE fName `AppE` (foldl AppE (ConE conName) (map VarE argNames)))
 		  argNames) []]]
+    return [InstanceD cxt (ConT ''Unpackable `AppT` theTy) decs]
+
+noUnpacker :: Cxt -> Name -> [TyVarBndr] -> Q [Dec]
+noUnpacker cxt tyCon tyArgs = do
+    argName <- newName "arg"
+    let theTy = foldl (\ t0 arg -> t0 `AppT` arg) (ConT tyCon) (map (VarT . tyVarBndrName) tyArgs)
+    let inline = InlineSpec True False Nothing
+    let pragmas =
+	  [PragmaD $ InlineP (mkName "runUnpackedReaderT")
+	    inline,
+	  PragmaD $ InlineP (mkName "unpackedReaderT")
+	    inline]
+    funcName <- newName "UnpackedReaderT"
+    mName <- newName "m"
+    aName <- newName "a"
+    fName <- newName "func"
+    let decs = 
+	  [NewtypeInstD [] ''UnpackedReaderT [theTy, VarT mName, VarT aName]
+	    (NormalC funcName [(NotStrict, ArrowT `AppT` theTy `AppT` (VarT mName `AppT` VarT aName))]) []] ++ pragmas ++ [
+	    FunD 'runUnpackedReaderT
+	      [Clause [ConP funcName [VarP fName], VarP argName]
+		(NormalB (VarE fName `AppE` VarE argName)) []],
+	    FunD 'unpackedReaderT
+	      [Clause [VarP fName] (NormalB $ ConE funcName `AppE` VarE fName) []]]
     return [InstanceD cxt (ConT ''Unpackable `AppT` theTy) decs]
