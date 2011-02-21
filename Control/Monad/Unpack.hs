@@ -1,8 +1,9 @@
 {-# LANGUAGE TypeOperators, TypeFamilies, TemplateHaskell #-}
-module Control.Monad.Unpack (module Control.Monad.Unpack.Class, (:~>), unpack, ($~)) where
+module Control.Monad.Unpack (module Control.Monad.Unpack.Class, (:~>), unpack, ($~), unpack1Instance, unpackInstance, noUnpackInstance) where
 
 import Data.Functor.Identity
 
+import Control.Monad
 import Control.Monad.Unpack.Class
 import Control.Monad.Unpack.TH
 
@@ -46,6 +47,7 @@ $(unpackInstance ''S.MVector)
 $(noUnpackInstance ''Bool)
 $(noUnpackInstance ''Maybe)
 $(noUnpackInstance ''Either)
+$(liftM concat (mapM tupleInstance [2..10]))
 
 instance Unpackable () where
   newtype UnpackedReaderT () m a = Result {runResult :: m a}

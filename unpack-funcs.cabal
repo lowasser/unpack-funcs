@@ -22,8 +22,8 @@ build-Depends:    base < 5.0.0.0, template-haskell >= 2.5.0.0, bytestring >= 0.9
 ghc-options:
   -Wall -fno-warn-name-shadowing -fno-warn-orphans
 exposed-modules:  
-  Control.Monad.Unpack,
-  Control.Monad.Unpack.TH
+  Control.Monad.Unpack
 other-modules:
-  Control.Monad.Unpack.Class
+  Control.Monad.Unpack.Class,
+  Control.Monad.Unpack.TH
 }

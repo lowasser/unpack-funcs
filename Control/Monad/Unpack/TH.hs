@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
-module Control.Monad.Unpack.TH (unpack1Instance, unpackInstance, noUnpackInstance) where
+module Control.Monad.Unpack.TH (unpack1Instance, unpackInstance, noUnpackInstance, tupleInstance) where
 
 import Control.Monad
 import Control.Monad.Unpack.Class
@@ -41,6 +41,14 @@ conArgs _ = undefined
 tyVarBndrName  :: TyVarBndr -> Name
 tyVarBndrName (PlainTV var) = var
 tyVarBndrName (KindedTV var _) = var
+
+tupleInstance :: Int -> Q [Dec]
+tupleInstance n = do
+  argNames <- mapM (\ c -> newName [c]) (take n ['a'..])
+  unpacker [ClassP ''Unpackable [VarT argName] | argName <- argNames]
+    (tupleTypeName n)
+    (map PlainTV argNames)
+    (NormalC (tupleDataName n) [(NotStrict, VarT argName) | argName <- argNames])
 
 unpacker1 :: Cxt -> Name -> [TyVarBndr] -> Con -> Q [Dec]
 unpacker1 cxt tyCon tyArgs con = case conArgs con of
