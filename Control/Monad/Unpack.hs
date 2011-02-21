@@ -47,6 +47,11 @@ $(noUnpackInstance ''Bool)
 $(noUnpackInstance ''Maybe)
 $(noUnpackInstance ''Either)
 
+instance Unpackable () where
+  newtype UnpackedReaderT () m a = Result {runResult :: m a}
+  runUnpackedReaderT func _ = runResult func
+  unpackedReaderT func = Result $ func ()
+
 type (:~>) arg = UnpackedReaderT arg Identity
 
 infixr 0 :~>
