@@ -5,6 +5,12 @@ import Control.Monad
 import Control.Monad.Unpack.Class
 
 import Language.Haskell.TH
+import System.IO.Unsafe
+import Data.IORef
+
+-- Apparently, newName still generates name conflicts in GHC 7.2?  Really, really weird.
+uglyUnique :: IORef Int
+uglyUnique = unsafePerformIO (newIORef 0)
 
 -- | Unpack wrappers around primitive types, like 'Int'.
 unpack1Instance :: Name -> Q [Dec]
@@ -50,6 +56,9 @@ tupleInstance n = do
     (map PlainTV argNames)
     (NormalC (tupleDataName n) [(NotStrict, VarT argName) | argName <- argNames])
 
+getUnique :: Q Int
+getUnique = runIO (atomicModifyIORef uglyUnique (\ n -> (n+1, n)))
+
 unpacker1 :: Cxt -> Name -> [TyVarBndr] -> Con -> Q [Dec]
 unpacker1 cxt tyCon tyArgs con = case conArgs con of
   (conName, conArgs) -> do
@@ -61,7 +70,8 @@ unpacker1 cxt tyCon tyArgs con = case conArgs con of
 	    inline,
 	  PragmaD $ InlineP (mkName "unpackedReaderT")
 	    inline]
-    funcName <- newName "UnpackedReaderT"
+    u <- getUnique
+    funcName <- newName $ "UnpackedReaderTCon" ++ show u
     mName <- newName "m"
     aName <- newName "a"
     fName <- newName "func"
@@ -88,7 +98,8 @@ unpacker cxt tyCon tyArgs con = case conArgs con of
 	    inline,
 	  PragmaD $ InlineP (mkName "unpackedReaderT")
 	    inline]
-    funcName <- newName "UnpackedReaderT"
+    u <- getUnique
+    funcName <- newName $ "UnpackedReaderT" ++ show u
     mName <- newName "m"
     aName <- newName "a"
     fName <- newName "func"
@@ -120,7 +131,8 @@ noUnpacker cxt tyCon tyArgs = do
 	    inline,
 	  PragmaD $ InlineP (mkName "unpackedReaderT")
 	    inline]
-    funcName <- newName "UnpackedReaderT"
+    u <- getUnique
+    funcName <- newName $ "UnpackedReaderT" ++ show u
     mName <- newName "m"
     aName <- newName "a"
     fName <- newName "func"
