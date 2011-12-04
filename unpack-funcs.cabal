@@ -1,5 +1,5 @@
 name:		     unpack-funcs
-version:             0.2.0
+version:             0.3.0
 cabal-version:       >= 1.6
 tested-with:	     GHC
 category:            Control
