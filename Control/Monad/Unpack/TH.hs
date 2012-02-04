@@ -73,7 +73,7 @@ unpacker1 cxt tyCon tyArgs con = case conArgs con of
     u <- getUnique
     funcName <- newName $ "UnpackedReaderTCon" ++ show u
     mName <- newName "m"
-    aName <- newName "a"
+    aName <- newName "z"
     fName <- newName "func"
     let decs = 
 	  [NewtypeInstD [] ''UnpackedReaderT [theTy, VarT mName, VarT aName]
@@ -101,7 +101,7 @@ unpacker cxt tyCon tyArgs con = case conArgs con of
     u <- getUnique
     funcName <- newName $ "UnpackedReaderT" ++ show u
     mName <- newName "m"
-    aName <- newName "a"
+    aName <- newName "z"
     fName <- newName "func"
     let monadStack = foldr (\ argTy stk -> ConT ''UnpackedReaderT `AppT` argTy `AppT` stk)
 	  (VarT mName) conArgs
@@ -134,7 +134,7 @@ noUnpacker cxt tyCon tyArgs = do
     u <- getUnique
     funcName <- newName $ "UnpackedReaderT" ++ show u
     mName <- newName "m"
-    aName <- newName "a"
+    aName <- newName "z"
     fName <- newName "func"
     let decs = 
 	  [NewtypeInstD [] ''UnpackedReaderT [theTy, VarT mName, VarT aName]
